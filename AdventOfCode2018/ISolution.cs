@@ -4,7 +4,9 @@ namespace AdventOfCode2018
     {
         int DayN { get; }
 
-        int Part1(string[] input);
-        int? Part2(string[] input);
+        string Part1(string[] input);
+
+        //Return string is null if unimplemented
+        string Part2(string[] input);
     }
 }

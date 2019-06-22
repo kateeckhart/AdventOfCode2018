@@ -1,14 +1,48 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace AdventOfCode2018
 {
+    public class OneOffString
+    {
+        private OneOffString(int pos, string str)
+        {
+            Pos = pos;
+            var rawOneOff = new char[str.Length - 1];
+            str.CopyTo(0, rawOneOff, 0, pos);
+            if (pos != str.Length - 1) str.CopyTo(pos + 1, rawOneOff, pos, rawOneOff.Length - pos);
+
+            OneOff = new string(rawOneOff);
+        }
+
+        private int Pos { get; }
+        public string OneOff { get; }
+
+        public static IEnumerable<OneOffString> allOneOffs(string str)
+        {
+            return str.Select((t, i) => new OneOffString(i, str));
+        }
+
+        public override bool Equals(object other)
+        {
+            if (other is OneOffString otherStr) return Pos == otherStr.Pos && OneOff == otherStr.OneOff;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return (Pos, OneOff).GetHashCode();
+        }
+    }
+
     public class Day2 : ISolution
     {
         private const int AmountOfLetters = 'z' - 'a' + 1;
         public int DayN => 2;
 
-        public int Part1(string[] input)
+        public string Part1(string[] input)
         {
             var appearsTwice = 0;
             var appearsThreeTimes = 0;
@@ -26,12 +60,19 @@ namespace AdventOfCode2018
                 if (letterCounts.Contains(3)) appearsThreeTimes++;
             }
 
-            return appearsTwice * appearsThreeTimes;
+            return (appearsTwice * appearsThreeTimes).ToString();
         }
 
-        public int? Part2(string[] input)
+        public string Part2(string[] input)
         {
-            return null;
+            var oneOffs = new HashSet<OneOffString>();
+
+            foreach (var id in input)
+            foreach (var oneOff in OneOffString.allOneOffs(id))
+                if (!oneOffs.Add(oneOff))
+                    return oneOff.OneOff;
+
+            return "";
         }
     }
 }

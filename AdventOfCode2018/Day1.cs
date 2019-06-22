@@ -7,12 +7,12 @@ namespace AdventOfCode2018
     {
         public int DayN => 1;
 
-        public int Part1(string[] input)
+        public string Part1(string[] input)
         {
-            return ParseInput(input).Sum();
+            return ParseInput(input).Sum().ToString();
         }
 
-        public int? Part2(string[] input)
+        public string Part2(string[] input)
         {
             var frequencies = new HashSet<int>(new[] {0});
             var frequency = 0;
@@ -22,7 +22,7 @@ namespace AdventOfCode2018
                 {
                     frequency += num;
 
-                    if (!frequencies.Add(frequency)) return frequency;
+                    if (!frequencies.Add(frequency)) return frequency.ToString();
                 }
         }
 
