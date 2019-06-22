@@ -4,7 +4,8 @@ namespace AdventOfCode2018
     {
         public static void Main(string[] input)
         {
-            Common.Run(new Day1());
+            var solutions = new ISolution[] {new Day1(), new Day2()};
+            foreach (var solution in solutions) Common.Run(solution);
         }
     }
 }
