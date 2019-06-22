@@ -30,10 +30,5 @@ namespace AdventOfCode2018
         {
             return input.Select(int.Parse);
         }
-
-        public static void Main(string[] str)
-        {
-            Common.Run(new Day1());
-        }
     }
 }
