@@ -42,7 +42,7 @@ namespace AdventOfCode2018
             return "";
         }
 
-        private class OneOffString
+        private struct OneOffString
         {
             private OneOffString(int pos, string str)
             {
