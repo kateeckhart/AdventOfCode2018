@@ -7,12 +7,17 @@ namespace AdventOfCode2018
     {
         public int DayN => 1;
 
-        public string Part1(string[] input)
+        public (string, string) GetAns(string[] input)
+        {
+            return (Part1(input), Part2(input));
+        }
+
+        private static string Part1(IEnumerable<string> input)
         {
             return ParseInput(input).Sum().ToString();
         }
 
-        public string Part2(string[] input)
+        private static string Part2(string[] input)
         {
             var frequencies = new HashSet<int>(new[] {0});
             var frequency = 0;

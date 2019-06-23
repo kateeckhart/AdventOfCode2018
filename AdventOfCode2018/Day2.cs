@@ -9,7 +9,12 @@ namespace AdventOfCode2018
         private const int AmountOfLetters = 'z' - 'a' + 1;
         public int DayN => 2;
 
-        public string Part1(string[] input)
+        public (string, string) GetAns(string[] input)
+        {
+            return (Part1(input), Part2(input));
+        }
+
+        private static string Part1(IEnumerable<string> input)
         {
             var appearsTwice = 0;
             var appearsThreeTimes = 0;
@@ -30,7 +35,7 @@ namespace AdventOfCode2018
             return (appearsTwice * appearsThreeTimes).ToString();
         }
 
-        public string Part2(string[] input)
+        private static string Part2(IEnumerable<string> input)
         {
             var oneOffs = new HashSet<OneOffString>();
 

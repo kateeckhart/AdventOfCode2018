@@ -9,24 +9,9 @@ namespace AdventOfCode2018
         private const int WidthOfFabric = 1000;
         private const int HeightOfFabric = 1000;
 
-        int ISolution.DayN => 3;
+        public int DayN => 3;
 
-        string ISolution.Part1(string[] input)
-        {
-            return GetAns(input).Item1.ToString();
-        }
-
-        string ISolution.Part2(string[] input)
-        {
-            return GetAns(input).Item2.ToString();
-        }
-
-        private static IEnumerable<Claim> ParseInput(IEnumerable<string> input)
-        {
-            return input.Select(str => new Claim(new ClaimDescription(str)));
-        }
-
-        private static (int, int) GetAns(string[] input)
+        public (string, string) GetAns(string[] input)
         {
             var fabric = new Square[WidthOfFabric, HeightOfFabric];
             var overlapping = 0;
@@ -57,7 +42,12 @@ namespace AdventOfCode2018
 
             var firstOverlap = claims.First(claim => !claim.Overlaps).Description.Id;
 
-            return (overlapping, firstOverlap);
+            return (overlapping.ToString(), firstOverlap.ToString());
+        }
+
+        private static IEnumerable<Claim> ParseInput(IEnumerable<string> input)
+        {
+            return input.Select(str => new Claim(new ClaimDescription(str)));
         }
 
         private struct ClaimDescription
