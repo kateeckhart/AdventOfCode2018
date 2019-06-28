@@ -45,59 +45,75 @@ namespace AdventOfCode2018
             for (var y = 0; y < size; y++)
                 gridPower += grid[x, y];
             var greatestPower = gridPower;
-            for (var x = 0; x < 300 - size; x += 2)
+            var moveBack = false;
+            for (var x = 0; x <= 300 - size; x++)
             {
-                for (var y = size; y < 300; y++)
+                if (!moveBack)
                 {
-                    for (var h = x; h < x + size; h++)
+                    for (var y = 0; y < 300 - size; y++)
                     {
-                        gridPower -= grid[h, y - size];
-                        gridPower += grid[h, y];
-                    }
-
-                    if (gridPower <= greatestPower) continue;
-                    bestX = x;
-                    bestY = y - size + 1;
-                    greatestPower = gridPower;
-                }
-
-                for (var y = 300 - size; y < 300; y++)
-                {
-                    gridPower -= grid[x, y];
-                    gridPower += grid[x + size, y];
-                }
-
-                if (gridPower > greatestPower)
-                {
-                    bestX = x + 1;
-                    bestY = 299 - size;
-                }
-
-                if (x != 299 - size)
-                    for (var y = 299 - size; y >= 0; y--)
-                    {
-                        for (var h = x + 1; h < x + size + 1; h++)
+                        for (var h = x; h < x + size; h++)
                         {
-                            gridPower -= grid[h, y + size];
-                            gridPower += grid[h, y];
+                            gridPower -= grid[h, y];
+                            gridPower += grid[h, y + size];
                         }
 
                         if (gridPower <= greatestPower) continue;
-                        bestX = x + 1;
-                        bestY = y - size + 1;
+                        bestX = x;
+                        bestY = y + 1;
                         greatestPower = gridPower;
                     }
 
-                if (x == 300 - size || x == 299 - size) continue;
-                for (var y = 0; y < size; y++)
+                    if (x != 300 - size)
+                    {
+                        for (var y = 300 - size; y < 300; y++)
+                        {
+                            gridPower -= grid[x, y];
+                            gridPower += grid[x + size, y];
+                        }
+
+                        if (gridPower > greatestPower)
+                        {
+                            bestX = x + 1;
+                            bestY = 300 - size;
+                            greatestPower = gridPower;
+                        }
+                    }
+                }
+                else
                 {
-                    gridPower -= grid[x + 1, y];
-                    gridPower += grid[x + size + 1, y];
+                    for (var y = 299; y >= size; y--)
+                    {
+                        for (var h = x; h < x + size; h++)
+                        {
+                            gridPower -= grid[h, y];
+                            gridPower += grid[h, y - size];
+                        }
+
+                        if (gridPower <= greatestPower) continue;
+                        bestX = x;
+                        bestY = y - size;
+                        greatestPower = gridPower;
+                    }
+
+                    if (x != 300 - size)
+                    {
+                        for (var y = 0; y < size; y++)
+                        {
+                            gridPower -= grid[x, y];
+                            gridPower += grid[x + size, y];
+                        }
+
+                        if (gridPower > greatestPower)
+                        {
+                            bestX = x + 1;
+                            bestY = 0;
+                            greatestPower = gridPower;
+                        }
+                    }
                 }
 
-                if (gridPower <= greatestPower) continue;
-                bestX = x + 2;
-                bestY = 0;
+                moveBack = !moveBack;
             }
 
             return ((bestX + 1, bestY + 1), greatestPower);
