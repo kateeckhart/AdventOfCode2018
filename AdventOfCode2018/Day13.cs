@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace AdventOfCode2018
@@ -24,7 +26,7 @@ namespace AdventOfCode2018
                         break;
                 }
 
-            var carts = 0;
+            var carts = new List<Cart>();
             for (var i = 0; i < input.Length; i++)
             for (var j = 0; j < input[i].Length; j++)
             {
@@ -34,14 +36,14 @@ namespace AdventOfCode2018
                 switch (input[i][j])
                 {
                     case '<':
-                        cart = new Cart(RealDirection.Left);
+                        cart = new Cart(RealDirection.Left, twoWay);
                         twoWay.CartOnTrack = cart;
-                        carts++;
+                        carts.Add(cart);
                         goto leftRight;
                     case '>':
-                        cart = new Cart(RealDirection.Right);
+                        cart = new Cart(RealDirection.Right, twoWay);
                         twoWay.CartOnTrack = cart;
-                        carts++;
+                        carts.Add(cart);
                         goto leftRight;
                     case '-':
                         leftRight:
@@ -49,14 +51,14 @@ namespace AdventOfCode2018
                         twoWay.Paths[1] = new TwoWay.Path(grid[i, j + 1], RealDirection.Right, RealDirection.Right);
                         break;
                     case '^':
-                        cart = new Cart(RealDirection.Up);
+                        cart = new Cart(RealDirection.Up, twoWay);
                         twoWay.CartOnTrack = cart;
-                        carts++;
+                        carts.Add(cart);
                         goto upDown;
                     case 'v':
-                        cart = new Cart(RealDirection.Down);
+                        cart = new Cart(RealDirection.Down, twoWay);
                         twoWay.CartOnTrack = cart;
-                        carts++;
+                        carts.Add(cart);
                         goto upDown;
                     case '|':
                         upDown:
@@ -101,47 +103,27 @@ namespace AdventOfCode2018
                 }
             }
 
-            Track firstTrack = null;
-
-            for (var i = input.Length - 1; i >= 0; i--)
-            for (var j = input[0].Length - 1; j >= 0; j--)
-            {
-                if (grid[i, j] == null) continue;
-                grid[i, j].NextToProcess = firstTrack;
-                firstTrack = grid[i, j];
-            }
-
             Vec2? locOfFirstCrash = null;
 
-            var tick = 1;
-            while (carts > 1)
+            while (carts.Count > 1)
             {
-                var track = firstTrack;
-                while (track != null)
+                carts.Sort();
+                for (var i = carts.Count - 1; i >= 0; i--)
+                    if (carts[i].OnTrack == null)
+                        carts.RemoveAt(i);
+                    else
+                        break;
+                if (carts.Count == 1) break;
+                foreach (var cart in carts)
                 {
-                    var locOfCrash = track.Process(tick);
-                    if (locOfCrash != null)
-                    {
-                        carts -= 2;
-                        if (locOfFirstCrash == null) locOfFirstCrash = locOfCrash;
-                    }
-
-                    track = track.NextToProcess;
+                    var locOfCrash = cart.OnTrack?.Process();
+                    if (locOfCrash == null) continue;
+                    if (locOfFirstCrash == null) locOfFirstCrash = locOfCrash;
                 }
-
-                tick++;
-            }
-
-            var lastCartTrack = firstTrack;
-            while (lastCartTrack != null)
-            {
-                if (lastCartTrack.CartOnTrack != null) break;
-                if (lastCartTrack.NextToProcess == null) break;
-                lastCartTrack = lastCartTrack.NextToProcess;
             }
 
             return ($"{locOfFirstCrash.Value.X},{locOfFirstCrash.Value.Y}",
-                $"{lastCartTrack.Loc.X},{lastCartTrack.Loc.Y}");
+                $"{carts[0].OnTrack.Loc.X},{carts[0].OnTrack.Loc.Y}");
         }
 
         private static IntersectionDirection NextIntersection(IntersectionDirection dir)
@@ -164,23 +146,27 @@ namespace AdventOfCode2018
             Right
         }
 
-        private struct Cart
+        private class Cart : IComparable<Cart>
         {
-            public Cart(RealDirection direction) : this()
+            public Cart(RealDirection direction, Track onTrack)
             {
                 Direction = direction;
+                OnTrack = onTrack;
             }
 
-            public Cart(RealDirection direction, IntersectionDirection nextIntersection, int tick) : this(direction)
+            public RealDirection Direction { get; set; }
+            public IntersectionDirection NextIntersection { get; set; }
+            public Track OnTrack { get; set; }
+
+            public int CompareTo(Cart other)
             {
-                NextIntersection = nextIntersection;
-                Tick = tick;
+                if (OnTrack == null) return other.OnTrack == null ? 0 : 1;
+
+                if (other.OnTrack == null) return -1;
+
+                var xCompare = OnTrack.Loc.X.CompareTo(other.OnTrack.Loc.X);
+                return xCompare != 0 ? xCompare : OnTrack.Loc.Y.CompareTo(other.OnTrack.Loc.Y);
             }
-
-            public RealDirection Direction { get; }
-            public IntersectionDirection NextIntersection { get; }
-
-            public int Tick { get; }
         }
 
         private struct Vec2
@@ -202,22 +188,26 @@ namespace AdventOfCode2018
                 Loc = loc;
             }
 
-            public Track NextToProcess { get; set; }
-            public Cart? CartOnTrack { get; set; }
+            public Cart CartOnTrack { get; set; }
 
             public Vec2 Loc { get; }
 
-            public abstract Vec2? Process(int tick);
+            public abstract Vec2? Process();
 
             public Vec2? SetCartOnTrack(Cart cart)
             {
                 if (CartOnTrack != null)
                 {
+                    CartOnTrack.OnTrack = null;
                     CartOnTrack = null;
+                    cart.OnTrack.CartOnTrack = null;
+                    cart.OnTrack = null;
                     return Loc;
                 }
 
                 CartOnTrack = cart;
+                cart.OnTrack.CartOnTrack = null;
+                cart.OnTrack = this;
                 return null;
             }
         }
@@ -230,14 +220,13 @@ namespace AdventOfCode2018
 
             public Path[] Paths { get; } = new Path[2];
 
-            public override Vec2? Process(int tick)
+            public override Vec2? Process()
             {
-                if (CartOnTrack == null || CartOnTrack.Value.Tick >= tick) return null;
-                var path = Paths.First(x => x.From == CartOnTrack.Value.Direction);
-                var newCart = new Cart(path.To, CartOnTrack.Value.NextIntersection, tick);
-                CartOnTrack = null;
+                if (CartOnTrack == null) return null;
+                var path = Paths.First(x => x.From == CartOnTrack.Direction);
+                CartOnTrack.Direction = path.To;
 
-                return path.PathTrack.SetCartOnTrack(newCart);
+                return path.PathTrack.SetCartOnTrack(CartOnTrack);
             }
 
             public struct Path
@@ -263,13 +252,12 @@ namespace AdventOfCode2018
 
             public Track[] Tracks { get; } = new Track[4];
 
-            public override Vec2? Process(int tick)
+            public override Vec2? Process()
             {
-                if (CartOnTrack == null || CartOnTrack.Value.Tick >= tick) return null;
+                if (CartOnTrack == null) return null;
+                var newDirection = CartOnTrack.Direction;
 
-                var newDirection = CartOnTrack.Value.Direction;
-
-                switch (CartOnTrack.Value.NextIntersection)
+                switch (CartOnTrack.NextIntersection)
                 {
                     case IntersectionDirection.Left:
                         switch (newDirection)
@@ -311,10 +299,10 @@ namespace AdventOfCode2018
                         break;
                 }
 
-                var newCart = new Cart(newDirection, NextIntersection(CartOnTrack.Value.NextIntersection), tick);
-                CartOnTrack = null;
+                CartOnTrack.Direction = newDirection;
+                CartOnTrack.NextIntersection = NextIntersection(CartOnTrack.NextIntersection);
 
-                return Tracks[(int) newDirection].SetCartOnTrack(newCart);
+                return Tracks[(int) newDirection].SetCartOnTrack(CartOnTrack);
             }
         }
     }
