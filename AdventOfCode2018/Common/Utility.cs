@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 
-namespace AdventOfCode2018
+namespace AdventOfCode2018.Common
 {
-    public static class Common
+    public static class Utility
     {
         public static void Run(ISolution solution)
         {

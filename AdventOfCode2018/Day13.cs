@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AdventOfCode2018.Common;
 
 namespace AdventOfCode2018
 {
@@ -12,17 +13,16 @@ namespace AdventOfCode2018
         {
             var grid = new Track[input.Length, input[0].Length];
 
-            for (var i = 0; i < input.Length; i++)
-            for (var j = 0; j < input[i].Length; j++)
-                switch (input[i][j])
+            foreach (var track in TwoDIterItem<Track>.TwoDIter(grid))
+                switch (input[track.Loc.Y][track.Loc.X])
                 {
                     case '+':
-                        grid[i, j] = new Intersection(new Vec2(j, i));
+                        track.Item = new Intersection(track.Loc);
                         break;
                     case ' ':
                         break;
                     default:
-                        grid[i, j] = new TwoWay(new Vec2(j, i));
+                        track.Item = new TwoWay(track.Loc);
                         break;
                 }
 
@@ -32,7 +32,7 @@ namespace AdventOfCode2018
             {
                 TwoWay twoWay = null;
                 Cart cart;
-                if (grid[i, j] is TwoWay) twoWay = (TwoWay) grid[i, j];
+                if (grid[j, i] is TwoWay) twoWay = (TwoWay) grid[j, i];
                 switch (input[i][j])
                 {
                     case '<':
@@ -47,8 +47,8 @@ namespace AdventOfCode2018
                         goto leftRight;
                     case '-':
                         leftRight:
-                        twoWay.Paths[0] = new TwoWay.Path(grid[i, j - 1], RealDirection.Left, RealDirection.Left);
-                        twoWay.Paths[1] = new TwoWay.Path(grid[i, j + 1], RealDirection.Right, RealDirection.Right);
+                        twoWay.Paths[0] = new TwoWay.Path(grid[j - 1, i], RealDirection.Left, RealDirection.Left);
+                        twoWay.Paths[1] = new TwoWay.Path(grid[j + 1, i], RealDirection.Right, RealDirection.Right);
                         break;
                     case '^':
                         cart = new Cart(RealDirection.Up, twoWay);
@@ -62,20 +62,20 @@ namespace AdventOfCode2018
                         goto upDown;
                     case '|':
                         upDown:
-                        twoWay.Paths[0] = new TwoWay.Path(grid[i + 1, j], RealDirection.Down, RealDirection.Down);
-                        twoWay.Paths[1] = new TwoWay.Path(grid[i - 1, j], RealDirection.Up, RealDirection.Up);
+                        twoWay.Paths[0] = new TwoWay.Path(grid[j, i + 1], RealDirection.Down, RealDirection.Down);
+                        twoWay.Paths[1] = new TwoWay.Path(grid[j, i - 1], RealDirection.Up, RealDirection.Up);
                         break;
                     case '/':
                         if (i < input.Length - 2 && input[i + 1][j] != ' ' && input[i + 1][j] != '-' &&
                             input[i + 1][j] != '\\' && input[i + 1][j] != '/')
                         {
-                            twoWay.Paths[0] = new TwoWay.Path(grid[i, j + 1], RealDirection.Up, RealDirection.Right);
-                            twoWay.Paths[1] = new TwoWay.Path(grid[i + 1, j], RealDirection.Left, RealDirection.Down);
+                            twoWay.Paths[0] = new TwoWay.Path(grid[j + 1, i], RealDirection.Up, RealDirection.Right);
+                            twoWay.Paths[1] = new TwoWay.Path(grid[j, i + 1], RealDirection.Left, RealDirection.Down);
                         }
                         else
                         {
-                            twoWay.Paths[0] = new TwoWay.Path(grid[i - 1, j], RealDirection.Right, RealDirection.Up);
-                            twoWay.Paths[1] = new TwoWay.Path(grid[i, j - 1], RealDirection.Down, RealDirection.Left);
+                            twoWay.Paths[0] = new TwoWay.Path(grid[j, i - 1], RealDirection.Right, RealDirection.Up);
+                            twoWay.Paths[1] = new TwoWay.Path(grid[j - 1, i], RealDirection.Down, RealDirection.Left);
                         }
 
                         break;
@@ -83,22 +83,22 @@ namespace AdventOfCode2018
                         if (i < input.Length - 2 && input[i + 1][j] != ' ' && input[i + 1][j] != '-' &&
                             input[i + 1][j] != '\\' && input[i + 1][j] != '/')
                         {
-                            twoWay.Paths[0] = new TwoWay.Path(grid[i + 1, j], RealDirection.Right, RealDirection.Down);
-                            twoWay.Paths[1] = new TwoWay.Path(grid[i, j - 1], RealDirection.Up, RealDirection.Left);
+                            twoWay.Paths[0] = new TwoWay.Path(grid[j, i + 1], RealDirection.Right, RealDirection.Down);
+                            twoWay.Paths[1] = new TwoWay.Path(grid[j - 1, i], RealDirection.Up, RealDirection.Left);
                         }
                         else
                         {
-                            twoWay.Paths[0] = new TwoWay.Path(grid[i - 1, j], RealDirection.Left, RealDirection.Up);
-                            twoWay.Paths[1] = new TwoWay.Path(grid[i, j + 1], RealDirection.Down, RealDirection.Right);
+                            twoWay.Paths[0] = new TwoWay.Path(grid[j, i - 1], RealDirection.Left, RealDirection.Up);
+                            twoWay.Paths[1] = new TwoWay.Path(grid[j + 1, i], RealDirection.Down, RealDirection.Right);
                         }
 
                         break;
                     case '+':
-                        var intersection = (Intersection) grid[i, j];
-                        intersection.Tracks[(int) RealDirection.Down] = grid[i + 1, j];
-                        intersection.Tracks[(int) RealDirection.Up] = grid[i - 1, j];
-                        intersection.Tracks[(int) RealDirection.Left] = grid[i, j - 1];
-                        intersection.Tracks[(int) RealDirection.Right] = grid[i, j + 1];
+                        var intersection = (Intersection) grid[j, i];
+                        intersection.Tracks[(int) RealDirection.Down] = grid[j, i + 1];
+                        intersection.Tracks[(int) RealDirection.Up] = grid[j, i - 1];
+                        intersection.Tracks[(int) RealDirection.Left] = grid[j - 1, i];
+                        intersection.Tracks[(int) RealDirection.Right] = grid[j + 1, i];
                         break;
                 }
             }
@@ -167,18 +167,6 @@ namespace AdventOfCode2018
                 var xCompare = OnTrack.Loc.X.CompareTo(other.OnTrack.Loc.X);
                 return xCompare != 0 ? xCompare : OnTrack.Loc.Y.CompareTo(other.OnTrack.Loc.Y);
             }
-        }
-
-        private struct Vec2
-        {
-            public Vec2(int x, int y)
-            {
-                X = x;
-                Y = y;
-            }
-
-            public int X { get; }
-            public int Y { get; }
         }
 
         private abstract class Track

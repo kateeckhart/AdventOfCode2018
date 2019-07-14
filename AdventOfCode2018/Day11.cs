@@ -1,3 +1,5 @@
+using AdventOfCode2018.Common;
+
 namespace AdventOfCode2018
 {
     public class Day11 : ISolution
@@ -8,21 +10,20 @@ namespace AdventOfCode2018
         {
             var serial = int.Parse(input[0]);
             var grid = new sbyte[300, 300];
-            for (var x = 0; x < 300; x++)
-            for (var y = 0; y < 300; y++)
+            foreach (var gridLevel in TwoDIterItem<sbyte>.TwoDIter(grid))
             {
-                var rackId = x + 11;
-                var powerLevel = rackId * (y + 1);
+                var rackId = gridLevel.Loc.X + 11;
+                var powerLevel = rackId * (gridLevel.Loc.Y + 1);
                 powerLevel += serial;
                 powerLevel *= rackId;
                 powerLevel %= 1000;
                 powerLevel /= 100;
                 powerLevel -= 5;
-                grid[x, y] = (sbyte) powerLevel;
+                gridLevel.Item = (sbyte) powerLevel;
             }
 
-            var ((part1X, part1Y), _) = CalcPowerSquare(grid, 3);
-            var part2 = ((0, 0), 0);
+            var (part1, _) = CalcPowerSquare(grid, 3);
+            var part2 = (new Vec2(), 0);
             var bestSize = 0;
 
             for (var i = 1; i < 300; i++)
@@ -33,13 +34,12 @@ namespace AdventOfCode2018
                 bestSize = i;
             }
 
-            return ($"{part1X},{part1Y}", $"{part2.Item1.Item1},{part2.Item1.Item2},{bestSize}");
+            return ($"{part1.X},{part1.Y}", $"{part2.Item1.X},{part2.Item1.Y},{bestSize}");
         }
 
-        private static ((int, int), int) CalcPowerSquare(sbyte[,] grid, int size)
+        private static (Vec2, int) CalcPowerSquare(sbyte[,] grid, int size)
         {
-            var bestX = 0;
-            var bestY = 0;
+            var best = new Vec2();
             var gridPower = 0;
             for (var x = 0; x < size; x++)
             for (var y = 0; y < size; y++)
@@ -59,8 +59,7 @@ namespace AdventOfCode2018
                         }
 
                         if (gridPower <= greatestPower) continue;
-                        bestX = x;
-                        bestY = y + 1;
+                        best = new Vec2(x, y + 1);
                         greatestPower = gridPower;
                     }
 
@@ -74,8 +73,7 @@ namespace AdventOfCode2018
 
                         if (gridPower > greatestPower)
                         {
-                            bestX = x + 1;
-                            bestY = 300 - size;
+                            best = new Vec2(x + 1, 300 - size);
                             greatestPower = gridPower;
                         }
                     }
@@ -91,8 +89,7 @@ namespace AdventOfCode2018
                         }
 
                         if (gridPower <= greatestPower) continue;
-                        bestX = x;
-                        bestY = y - size;
+                        best = new Vec2(x, y - size);
                         greatestPower = gridPower;
                     }
 
@@ -106,8 +103,7 @@ namespace AdventOfCode2018
 
                         if (gridPower > greatestPower)
                         {
-                            bestX = x + 1;
-                            bestY = 0;
+                            best = new Vec2(x + 1, 0);
                             greatestPower = gridPower;
                         }
                     }
@@ -116,7 +112,7 @@ namespace AdventOfCode2018
                 moveBack = !moveBack;
             }
 
-            return ((bestX + 1, bestY + 1), greatestPower);
+            return (best + new Vec2(1, 1), greatestPower);
         }
     }
 }

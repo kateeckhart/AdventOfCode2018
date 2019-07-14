@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using AdventOfCode2018.Common;
 
 namespace AdventOfCode2018
 {
@@ -42,9 +43,8 @@ namespace AdventOfCode2018
 
             var smallestBound = Star.GetStarBounds(stars);
             var sky = new char[smallestBound.X + 1, smallestBound.Y + 1];
-            for (var x = 0; x <= smallestBound.X; x++)
-            for (var y = 0; y <= smallestBound.Y; y++)
-                sky[x, y] = '.';
+            foreach (var star in TwoDIterItem<char>.TwoDIter(sky))
+                star.Item = '.';
             var lowest = Star.GetLowest(stars);
             foreach (var star in stars) sky[star.Pos.X - lowest.X, star.Pos.Y - lowest.Y] = '#';
 
@@ -98,28 +98,6 @@ namespace AdventOfCode2018
 
                 return new Vec2(highestX - lowest.X, highestY - lowest.Y);
             }
-        }
-
-        private struct Vec2
-        {
-            public Vec2(int x, int y)
-            {
-                X = x;
-                Y = y;
-            }
-
-            public static Vec2 operator +(Vec2 a, Vec2 b)
-            {
-                return new Vec2(a.X + b.X, a.Y + b.Y);
-            }
-
-            public static Vec2 operator -(Vec2 a, Vec2 b)
-            {
-                return new Vec2(a.X - b.X, a.Y - b.Y);
-            }
-
-            public int X { get; }
-            public int Y { get; }
         }
     }
 }

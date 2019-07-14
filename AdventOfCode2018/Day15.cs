@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AdventOfCode2018.Common;
 
 namespace AdventOfCode2018
 {
@@ -29,32 +30,26 @@ namespace AdventOfCode2018
         {
             var grid = new Tile[input[0].Length, input.Length];
             var state = new State(grid);
-            for (var y = 0; y < input.Length; y++)
-            for (var x = 0; x < input[0].Length; x++)
-            {
-                Tile newTile;
-                switch (input[y][x])
+            foreach (var tile in TwoDIterItem<Tile>.TwoDIter(grid))
+                switch (input[tile.Loc.Y][tile.Loc.X])
                 {
                     case '#':
-                        newTile = Wall.Instance;
+                        tile.Item = Wall.Instance;
                         break;
                     case '.':
-                        newTile = Empty.Instance;
+                        tile.Item = Empty.Instance;
                         break;
                     case 'E':
-                        newTile = new Elf(attack);
+                        tile.Item = new Elf(attack);
                         state.ElfCount++;
                         break;
                     case 'G':
-                        newTile = new Goblin();
+                        tile.Item = new Goblin();
                         state.GoblinCount++;
                         break;
                     default:
                         throw new ArgumentException();
                 }
-
-                grid[x, y] = newTile;
-            }
 
             var initialElves = state.ElfCount;
             var tick = 0;
@@ -62,10 +57,9 @@ namespace AdventOfCode2018
             {
                 tick++;
 
-                for (var y = 0; y < input.Length; y++)
-                for (var x = 0; x < input[0].Length; x++)
+                foreach (var tile in TwoDIterItem<Tile>.TwoDIter(grid))
                 {
-                    if (grid[x, y].Process(state, tick, x, y)) goto endLoop;
+                    if (tile.Item.Process(state, tick, tile.Loc)) goto endLoop;
                     if (attack > 3 && initialElves != state.ElfCount) return (0, true);
                 }
             }
@@ -73,9 +67,8 @@ namespace AdventOfCode2018
             endLoop:
             tick--;
             var totalHp = 0;
-            for (var y = 0; y < input.Length; y++)
-            for (var x = 0; x < input[0].Length; x++)
-                if (state.Grid[x, y] is Unit unit)
+            foreach (var tile in TwoDIterItem<Tile>.TwoDIter(grid))
+                if (tile.Item is Unit unit)
                     totalHp += unit.Hp;
 
             return (tick * totalHp, initialElves != state.ElfCount);
@@ -96,7 +89,7 @@ namespace AdventOfCode2018
 
         private abstract class Tile
         {
-            public virtual bool Process(State state, int tick, int x, int y)
+            public virtual bool Process(State state, int tick, Vec2 loc)
             {
                 return false;
             }
@@ -136,22 +129,14 @@ namespace AdventOfCode2018
                 return GetType() != other.GetType();
             }
 
-            private static int[,] CalculateDistance(Tile[,] grid, int x, int y)
+            private static int[,] CalculateDistance(Tile[,] grid, Vec2 loc)
             {
                 var ret = new int[grid.GetLength(0), grid.GetLength(1)];
-                for (var h = 0; h < grid.GetLength(0); h++)
-                for (var v = 0; v < grid.GetLength(1); v++)
-                    ret[h, v] = int.MaxValue;
+                foreach (var distance in TwoDIterItem<int>.TwoDIter(ret)) distance.Item = int.MaxValue;
 
-                ret[x, y] = 0;
-                var nodes = new List<(int, int)>(grid.Length) {(x, y)};
-
-                for (var h = 0; h < grid.GetLength(0); h++)
-                for (var v = 0; v < grid.GetLength(1); v++)
-                {
-                    if (!(grid[h, v] is Empty)) continue;
-                    nodes.Add((h, v));
-                }
+                ret[loc.X, loc.Y] = 0;
+                var nodes = new List<Vec2>(grid.Length) {loc};
+                nodes.AddRange(from tile in TwoDIterItem<Tile>.TwoDIter(grid) where tile.Item is Empty select tile.Loc);
 
                 while (nodes.Count > 0)
                 {
@@ -159,141 +144,129 @@ namespace AdventOfCode2018
                     var closestDistance = int.MaxValue - 1;
                     for (var i = 0; i < nodes.Count; i++)
                     {
-                        if (ret[nodes[i].Item1, nodes[i].Item2] >= closestDistance) continue;
+                        if (ret[nodes[i].X, nodes[i].Y] >= closestDistance) continue;
                         closestIndex = i;
-                        closestDistance = ret[nodes[i].Item1, nodes[i].Item2];
+                        closestDistance = ret[nodes[i].X, nodes[i].Y];
                     }
 
-                    var (closestX, closestY) = nodes[closestIndex];
+                    var closest = nodes[closestIndex];
                     nodes.RemoveAt(closestIndex);
 
-                    void TestDistance(int closeX, int closeY)
+                    void TestDistance(Vec2 close)
                     {
-                        if (ret[closeX, closeY] > closestDistance + 1 && grid[closeX, closeY] is Empty)
-                            ret[closeX, closeY] = closestDistance + 1;
+                        if (ret[close.X, close.Y] > closestDistance + 1 && grid[close.X, close.Y] is Empty)
+                            ret[close.X, close.Y] = closestDistance + 1;
                     }
 
-                    TestDistance(closestX - 1, closestY);
-                    TestDistance(closestX + 1, closestY);
-                    TestDistance(closestX, closestY - 1);
-                    TestDistance(closestX, closestY + 1);
+                    TestDistance(closest + new Vec2(0, -1));
+                    TestDistance(closest + new Vec2(-1, 0));
+                    TestDistance(closest + new Vec2(1, 0));
+                    TestDistance(closest + new Vec2(0, 1));
                 }
 
                 return ret;
             }
 
-            private static List<(int, int)> CalcPaths(int[,] distance, int x, int y)
+            private static List<Vec2> CalcPaths(int[,] distance, Vec2 loc)
             {
-                var shortestPaths = new List<(int, int)>();
-                var currentDistance = distance[x, y];
+                var shortestPaths = new List<Vec2>();
+                var currentDistance = distance[loc.X, loc.Y];
                 if (currentDistance == 1)
                 {
-                    shortestPaths.Add((x, y));
+                    shortestPaths.Add(loc);
                     return shortestPaths;
                 }
 
                 var shortestDistance = int.MaxValue;
-                var shortestNodes = new List<(int, int)>();
+                var shortestNodes = new List<Vec2>();
 
-                void TestDistance(int h, int v)
+                void TestDistance(Vec2 testingLoc)
                 {
-                    if (distance[h, v] > shortestDistance) return;
-                    if (distance[h, v] != shortestDistance) shortestNodes.Clear();
+                    if (distance[testingLoc.X, testingLoc.Y] > shortestDistance) return;
+                    if (distance[testingLoc.X, testingLoc.Y] != shortestDistance) shortestNodes.Clear();
 
-                    shortestDistance = distance[h, v];
-                    shortestNodes.Add((h, v));
+                    shortestDistance = distance[testingLoc.X, testingLoc.Y];
+                    shortestNodes.Add(testingLoc);
                 }
 
-                TestDistance(x - 1, y);
-                TestDistance(x + 1, y);
-                TestDistance(x, y - 1);
-                TestDistance(x, y + 1);
+                TestDistance(loc + new Vec2(0, -1));
+                TestDistance(loc + new Vec2(-1, 0));
+                TestDistance(loc + new Vec2(1, 0));
+                TestDistance(loc + new Vec2(0, 1));
 
-                foreach (var (h, v) in shortestNodes) shortestPaths.AddRange(CalcPaths(distance, h, v));
+                foreach (var node in shortestNodes) shortestPaths.AddRange(CalcPaths(distance, node));
 
-                return new List<(int, int)>(shortestPaths.Distinct());
+                return new List<Vec2>(shortestPaths.Distinct());
             }
 
             protected abstract void KillEnemy(State state);
 
-            private static int SortReadOrder((int, int) first, (int, int) second)
+            public override bool Process(State state, int tick, Vec2 thisLoc)
             {
-                var yCompare = first.Item2.CompareTo(second.Item2);
-                return yCompare == 0 ? first.Item1.CompareTo(second.Item1) : yCompare;
-            }
-
-            public override bool Process(State state, int tick, int thisX, int thisY)
-            {
-                base.Process(state, tick, thisX, thisY);
+                base.Process(state, tick, thisLoc);
                 if (Tick >= tick) return false;
                 if (state.ElfCount == 0 || state.GoblinCount == 0) return true;
                 Tick = tick;
-                var distanceGrid = CalculateDistance(state.Grid, thisX, thisY);
+                var distanceGrid = CalculateDistance(state.Grid, thisLoc);
                 var closestEnemyDistance = int.MaxValue;
-                int? closestEnemyY = null;
-                int? closestEnemyX = null;
+                Vec2? closestEnemy = null;
 
-                IEnumerable<(int, int)> Adjacent(int x, int y, Func<Tile, bool> isValid)
+                IEnumerable<Vec2> Adjacent(Vec2 loc, Func<Tile, bool> isValid)
                 {
-                    if (isValid(state.Grid[x, y - 1])) yield return (x, y - 1);
+                    if (isValid(state.Grid[loc.X, loc.Y - 1])) yield return new Vec2(loc.X, loc.Y - 1);
 
-                    if (isValid(state.Grid[x - 1, y])) yield return (x - 1, y);
+                    if (isValid(state.Grid[loc.X - 1, loc.Y])) yield return new Vec2(loc.X - 1, loc.Y);
 
-                    if (isValid(state.Grid[x + 1, y])) yield return (x + 1, y);
+                    if (isValid(state.Grid[loc.X + 1, loc.Y])) yield return new Vec2(loc.X + 1, loc.Y);
 
-                    if (isValid(state.Grid[x, y + 1])) yield return (x, y + 1);
+                    if (isValid(state.Grid[loc.X, loc.Y + 1])) yield return new Vec2(loc.X, loc.Y + 1);
                 }
 
-                var adjacentToEnemy = new List<(int, int)>();
-                for (var y = 0; y < state.Grid.GetLength(1); y++)
-                for (var x = 0; x < state.Grid.GetLength(0); x++)
+                var adjacentToEnemy = new List<Vec2>();
+
+                foreach (var tile in TwoDIterItem<Tile>.TwoDIter(state.Grid))
                 {
-                    if (!(state.Grid[x, y] is Unit && IsEnemy((Unit) state.Grid[x, y]))) continue;
-                    adjacentToEnemy.AddRange(Adjacent(x, y, tile => tile is Empty || tile == this));
+                    if (!(tile.Item is Unit unit && IsEnemy(unit))) continue;
+                    adjacentToEnemy.AddRange(Adjacent(tile.Loc, til => til is Empty || til == this));
                 }
 
-                adjacentToEnemy.Sort(SortReadOrder);
+                adjacentToEnemy.Sort();
 
-                foreach (var (h, v) in adjacentToEnemy)
+                foreach (var tile in adjacentToEnemy)
                 {
-                    if (distanceGrid[h, v] >= closestEnemyDistance) continue;
-                    closestEnemyY = v;
-                    closestEnemyX = h;
-                    closestEnemyDistance = distanceGrid[h, v];
+                    if (distanceGrid[tile.X, tile.Y] >= closestEnemyDistance) continue;
+                    closestEnemy = tile;
+                    closestEnemyDistance = distanceGrid[tile.X, tile.Y];
                 }
 
-                if (closestEnemyX == null) return false;
+                if (closestEnemy == null) return false;
 
                 if (closestEnemyDistance > 0)
                 {
-                    var paths = CalcPaths(distanceGrid, closestEnemyX.Value,
-                        closestEnemyY.Value);
-                    paths.Sort(SortReadOrder);
+                    var paths = CalcPaths(distanceGrid, closestEnemy.Value);
+                    paths.Sort();
 
-                    state.Grid[thisX, thisY] = Empty.Instance;
-                    thisX = paths[0].Item1;
-                    thisY = paths[0].Item2;
-                    state.Grid[thisX, thisY] = this;
+                    state.Grid[thisLoc.X, thisLoc.Y] = Empty.Instance;
+                    thisLoc = paths[0];
+                    state.Grid[thisLoc.X, thisLoc.Y] = this;
                 }
 
                 var lowestHp = int.MaxValue;
-                int? lowestHpX = null;
-                int? lowestHpY = null;
-                foreach (var (enemyX, enemyY) in Adjacent(thisX, thisY,
+                Vec2? lowestHpLoc = null;
+                foreach (var enemyLoc in Adjacent(thisLoc,
                     tile => tile is Unit unit && IsEnemy(unit)))
                 {
-                    var enemy = (Unit) state.Grid[enemyX, enemyY];
+                    var enemy = (Unit) state.Grid[enemyLoc.X, enemyLoc.Y];
                     if (enemy.Hp >= lowestHp) continue;
                     lowestHp = enemy.Hp;
-                    lowestHpX = enemyX;
-                    lowestHpY = enemyY;
+                    lowestHpLoc = enemyLoc;
                 }
 
-                if (lowestHpX == null) return false;
-                var target = (Unit) state.Grid[lowestHpX.Value, lowestHpY.Value];
+                if (lowestHpLoc == null) return false;
+                var target = (Unit) state.Grid[lowestHpLoc.Value.X, lowestHpLoc.Value.Y];
                 target.Hp -= AttackPower;
                 if (target.Hp > 0) return false;
-                state.Grid[lowestHpX.Value, lowestHpY.Value] = Empty.Instance;
+                state.Grid[lowestHpLoc.Value.X, lowestHpLoc.Value.Y] = Empty.Instance;
                 KillEnemy(state);
                 return false;
             }

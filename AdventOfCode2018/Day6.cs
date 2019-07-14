@@ -1,7 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AdventOfCode2018.Common;
 
 namespace AdventOfCode2018
 {
@@ -12,13 +12,13 @@ namespace AdventOfCode2018
 
         public (string, string) GetAns(string[] input)
         {
-            var cords = new Cord[input.Length];
+            var cords = new Vec2[input.Length];
             for (var i = 0; i < input.Length; i++)
             {
                 var match = CordParse.Match(input[i]);
                 var x = int.Parse(match.Groups["X"].Value);
                 var y = int.Parse(match.Groups["Y"].Value);
-                cords[i] = new Cord(x, y);
+                cords[i] = new Vec2(x, y);
             }
 
             var widthOfGrid = 0;
@@ -47,14 +47,14 @@ namespace AdventOfCode2018
             {
                 var x = rawCord.X + 1;
                 var y = rawCord.Y + 1;
-                var cord = new Cord(x, y);
+                var cord = new Vec2(x, y);
                 var emitter = new Emitter();
                 emitters.Add(emitter);
 
                 for (var h = 0; h < widthOfGrid; h++)
                 for (var v = 0; v < heightOfGrid; v++)
                 {
-                    var distanceTo = cord.DistanceTo(new Cord(h, v));
+                    var distanceTo = cord.DistanceTo(new Vec2(h, v));
                     var emitterDistance = new EmitterDistance(emitter, distanceTo);
                     grid[h, v].Distances.Add(emitterDistance);
                     if (distanceTo < grid[h, v].Closest.DistanceTo)
@@ -144,23 +144,6 @@ namespace AdventOfCode2018
 
         private class Emitter
         {
-        }
-
-        private struct Cord
-        {
-            public int X { get; }
-            public int Y { get; }
-
-            public Cord(int x, int y)
-            {
-                X = x;
-                Y = y;
-            }
-
-            public int DistanceTo(Cord other)
-            {
-                return Math.Abs(X - other.X) + Math.Abs(Y - other.Y);
-            }
         }
     }
 }
