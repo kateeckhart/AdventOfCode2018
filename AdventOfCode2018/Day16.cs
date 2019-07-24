@@ -1,32 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text.RegularExpressions;
+using AdventOfCode2018.Common.ElfCode;
 
 namespace AdventOfCode2018
 {
     public class Day16 : ISolution
     {
-        private static OpCode[] OpCodes { get; } =
-        {
-            new OpCode("addr", (regs, a, b, c) => regs[c] = regs[a] + regs[b]),
-            new OpCode("addi", (regs, a, b, c) => regs[c] = regs[a] + b),
-            new OpCode("mulr", (regs, a, b, c) => regs[c] = regs[a] * regs[b]),
-            new OpCode("muli", (regs, a, b, c) => regs[c] = regs[a] * b),
-            new OpCode("banr", (regs, a, b, c) => regs[c] = regs[a] & regs[b]),
-            new OpCode("bani", (regs, a, b, c) => regs[c] = regs[a] & b),
-            new OpCode("borr", (regs, a, b, c) => regs[c] = regs[a] | regs[b]),
-            new OpCode("bori", (regs, a, b, c) => regs[c] = regs[a] | b),
-            new OpCode("setr", (regs, a, b, c) => regs[c] = regs[a]),
-            new OpCode("seti", (regs, a, b, c) => regs[c] = a),
-            new OpCode("gtir", (regs, a, b, c) => regs[c] = a > regs[b] ? 1 : 0),
-            new OpCode("gtri", (regs, a, b, c) => regs[c] = regs[a] > b ? 1 : 0),
-            new OpCode("gtrr", (regs, a, b, c) => regs[c] = regs[a] > regs[b] ? 1 : 0),
-            new OpCode("eqir", (regs, a, b, c) => regs[c] = a == regs[b] ? 1 : 0),
-            new OpCode("eqri", (regs, a, b, c) => regs[c] = regs[a] == b ? 1 : 0),
-            new OpCode("eqrr", (regs, a, b, c) => regs[c] = regs[a] == regs[b] ? 1 : 0)
-        };
-
         private static Regex Before { get; } = new Regex(@"Before: \[(?<digits>\d+(?:, \d+){3})]");
         private static Regex OpCodeParse { get; } = new Regex(@"(?<opCode>\d+) (?<a>\d+) (?<b>\d+) (?<c>\d+)");
         private static Regex After { get; } = new Regex(@"After:  \[(?<digits>\d+(?:, \d+){3})]");
@@ -36,16 +18,14 @@ namespace AdventOfCode2018
         public (string, string) GetAns(string[] input)
         {
             var part1 = 0;
-            var regs = new List<int>();
-            for (var i = 0; i < 4; i++) regs.Add(0);
             using (var lineIter = ((IEnumerable<string>) input).GetEnumerator())
             {
                 if (!lineIter.MoveNext()) throw new ArgumentException();
-                var mappingTableBuilder = new List<HashSet<OpCode>>();
-                foreach (var _ in OpCodes)
+                var mappingTableBuilder = new List<HashSet<ElfOpCode>>();
+                foreach (var _ in ElfOpCode.OpCodes)
                 {
-                    var possibleSet = new HashSet<OpCode>();
-                    foreach (var opCode in OpCodes) possibleSet.Add(opCode);
+                    var possibleSet = new HashSet<ElfOpCode>();
+                    foreach (var opCode in ElfOpCode.OpCodes) possibleSet.Add(opCode);
                     mappingTableBuilder.Add(possibleSet);
                 }
 
@@ -67,7 +47,7 @@ namespace AdventOfCode2018
                     if (!lineIter.MoveNext() || lineIter.Current != "") throw new ArgumentException();
                     if (!lineIter.MoveNext()) throw new ArgumentException();
 
-                    var actsLike = OpCodes.Count(opCode => opCode.IsOpCode(beforeRegs, afterRegs, a, b, c));
+                    var actsLike = ElfOpCode.OpCodes.Count(opCode => opCode.IsOpCode(beforeRegs, afterRegs, a, b, c));
 
                     mappingTableBuilder[op].RemoveWhere(code => !code.IsOpCode(beforeRegs, afterRegs, a, b, c));
 
@@ -92,7 +72,7 @@ namespace AdventOfCode2018
                                 {
                                     singleIter.MoveNext();
                                     var knownOpCode = singleIter.Current;
-                                    if (knownOpCode.Func != op.Func) continue;
+                                    if (knownOpCode != op) continue;
                                     setShank = true;
                                     setCount--;
                                     return true;
@@ -108,6 +88,7 @@ namespace AdventOfCode2018
 
                 if (!lineIter.MoveNext() || lineIter.Current != "") throw new ArgumentException();
 
+                var ilGen = new Day16IlGen();
                 while (lineIter.MoveNext())
                 {
                     var opCodeMatch = OpCodeParse.Match(lineIter.Current);
@@ -115,32 +96,49 @@ namespace AdventOfCode2018
                     var a = int.Parse(opCodeMatch.Groups["a"].Value);
                     var b = int.Parse(opCodeMatch.Groups["b"].Value);
                     var c = int.Parse(opCodeMatch.Groups["c"].Value);
-                    opCode.Func(regs, a, b, c);
+                    ilGen.AddOpcode(opCode, a, b, c);
                 }
-            }
 
-            return (part1.ToString(), regs[0].ToString());
+                return (part1.ToString(), ilGen.Method().ToString());
+            }
         }
 
-        private delegate void OpCodeFunc(IList<int> regs, int a, int b, int c);
-
-        private struct OpCode
+        private class Day16IlGen : ElfIlGen<Func<int>>
         {
-            public OpCode(string name, OpCodeFunc func)
+            public Day16IlGen()
             {
-                Name = name;
-                Func = func;
+                Regs = Gen.DeclareLocal(typeof(IList<int>));
+                Gen.EmitInt(4);
+                Gen.Emit(OpCodes.Newarr, typeof(int));
+                Gen.Emit(OpCodes.Stloc_0);
             }
 
-            private string Name { get; }
-            public OpCodeFunc Func { get; }
+            private LocalBuilder Regs { get; }
 
-            public bool IsOpCode(IList<int> before, IList<int> after, int a, int b, int c)
+            protected override void EmitAfterOp(int a, int b, int c)
             {
-                var executedRegs = new List<int>(before);
-                Func(executedRegs, a, b, c);
+                Gen.Emit(OpCodes.Stelem_I4);
+            }
 
-                return !executedRegs.Where((t, i) => after[i] != t).Any();
+            protected override void EmitBeforeOp(int a, int b, int c)
+            {
+                Gen.EmitLoadLocal(Regs);
+                Gen.EmitInt(c);
+            }
+
+            protected override void EmitGetReg(int reg)
+            {
+                Gen.EmitLoadLocal(Regs);
+                Gen.EmitInt(reg);
+                Gen.Emit(OpCodes.Ldelem_I4);
+            }
+
+            protected override void EmitEnd()
+            {
+                Gen.EmitLoadLocal(Regs);
+                Gen.EmitInt(0);
+                Gen.Emit(OpCodes.Ldelem_I4);
+                Gen.Emit(OpCodes.Ret);
             }
         }
     }

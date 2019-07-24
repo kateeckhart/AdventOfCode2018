@@ -12,7 +12,7 @@ namespace AdventOfCode2018
                 new Day9(), new Day10(), new Day11(), new Day12(), new Day13(), new Day14(), new Day15(), new Day16(),
                 new Day17(), new Day18()
             };
-            foreach (var solution in solutions) Utility.Run(solution);
+            foreach (var solution in solutions) Utility.Run(solution, input[0]);
         }
     }
 }
