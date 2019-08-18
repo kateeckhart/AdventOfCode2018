@@ -56,7 +56,7 @@ namespace AdventOfCode2018.Common.ElfCode
             B = b;
         }
 
-        private string Name { get; }
+        public string Name { get; }
         public Ops Op { get; }
         public NumGet A { get; }
         public NumGet B { get; }

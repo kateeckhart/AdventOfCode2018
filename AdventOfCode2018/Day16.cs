@@ -99,45 +99,28 @@ namespace AdventOfCode2018
                     ilGen.AddOpcode(opCode, a, b, c);
                 }
 
-                return (part1.ToString(), ilGen.Method().ToString());
+                return (part1.ToString(), ilGen.Build()().ToString());
             }
         }
 
-        private class Day16IlGen : ElfIlGen<Func<int>>
+        private class Day16IlGen : ElfIlGen<Func<long>>
         {
-            public Day16IlGen()
+            public Day16IlGen() : base(4)
             {
-                Regs = Gen.DeclareLocal(typeof(IList<int>));
-                Gen.EmitInt(4);
-                Gen.Emit(OpCodes.Newarr, typeof(int));
-                Gen.Emit(OpCodes.Stloc_0);
             }
 
-            private LocalBuilder Regs { get; }
-
-            protected override void EmitAfterOp(int a, int b, int c)
+            protected override void EmitBegin()
             {
-                Gen.Emit(OpCodes.Stelem_I4);
-            }
-
-            protected override void EmitBeforeOp(int a, int b, int c)
-            {
-                Gen.EmitLoadLocal(Regs);
-                Gen.EmitInt(c);
-            }
-
-            protected override void EmitGetReg(int reg)
-            {
-                Gen.EmitLoadLocal(Regs);
-                Gen.EmitInt(reg);
-                Gen.Emit(OpCodes.Ldelem_I4);
+                Gen.EmitInt(5);
+                Gen.Emit(OpCodes.Newarr, typeof(long));
+                Gen.EmitStoreLocal(Regs);
             }
 
             protected override void EmitEnd()
             {
                 Gen.EmitLoadLocal(Regs);
                 Gen.EmitInt(0);
-                Gen.Emit(OpCodes.Ldelem_I4);
+                Gen.Emit(OpCodes.Ldelem_I8);
                 Gen.Emit(OpCodes.Ret);
             }
         }
