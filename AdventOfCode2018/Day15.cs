@@ -131,38 +131,37 @@ namespace AdventOfCode2018
 
             private static int[,] CalculateDistance(Tile[,] grid, Vec2 loc)
             {
-                var ret = new int[grid.GetLength(0), grid.GetLength(1)];
-                foreach (var distance in TwoDIterItem<int>.TwoDIter(ret)) distance.Item = int.MaxValue;
+                var queue = new PriorityQueue<DistanceNode>();
+                var nodes = new DistanceNode[grid.GetLength(0), grid.GetLength(1)];
 
-                ret[loc.X, loc.Y] = 0;
-                var nodes = new List<Vec2>(grid.Length) {loc};
-                nodes.AddRange(from tile in TwoDIterItem<Tile>.TwoDIter(grid) where tile.Item is Empty select tile.Loc);
+                foreach (var node in TwoDIterItem<DistanceNode>.TwoDIter(nodes))
+                    node.Item = new DistanceNode(node.Loc);
 
-                while (nodes.Count > 0)
+                nodes[loc.X, loc.Y] = new DistanceNode(queue, loc, 0);
+                foreach (var tile in TwoDIterItem<Tile>.TwoDIter(grid).Where(x => x.Item is Empty))
+                    nodes[tile.Loc.X, tile.Loc.Y] = new DistanceNode(queue, tile.Loc);
+
+                while (queue.Count > 0)
                 {
-                    var closestIndex = 0;
-                    var closestDistance = int.MaxValue - 1;
-                    for (var i = 0; i < nodes.Count; i++)
-                    {
-                        if (ret[nodes[i].X, nodes[i].Y] >= closestDistance) continue;
-                        closestIndex = i;
-                        closestDistance = ret[nodes[i].X, nodes[i].Y];
-                    }
-
-                    var closest = nodes[closestIndex];
-                    nodes.RemoveAt(closestIndex);
+                    var closest = queue.Pop();
+                    if (closest.Distance == int.MaxValue) break;
 
                     void TestDistance(Vec2 close)
                     {
-                        if (ret[close.X, close.Y] > closestDistance + 1 && grid[close.X, close.Y] is Empty)
-                            ret[close.X, close.Y] = closestDistance + 1;
+                        if (grid[close.X, close.Y] is Empty && nodes[close.X, close.Y].Distance > closest.Distance + 1)
+                            nodes[close.X, close.Y].Distance = closest.Distance + 1;
                     }
 
-                    TestDistance(closest + new Vec2(0, -1));
-                    TestDistance(closest + new Vec2(-1, 0));
-                    TestDistance(closest + new Vec2(1, 0));
-                    TestDistance(closest + new Vec2(0, 1));
+                    TestDistance(closest.Loc + new Vec2(0, -1));
+                    TestDistance(closest.Loc + new Vec2(-1, 0));
+                    TestDistance(closest.Loc + new Vec2(1, 0));
+                    TestDistance(closest.Loc + new Vec2(0, 1));
                 }
+
+                var ret = new int[grid.GetLength(0), grid.GetLength(1)];
+                for (var x = 0; x < grid.GetLength(0); x++)
+                for (var y = 0; y < grid.GetLength(1); y++)
+                    ret[x, y] = nodes[x, y].Distance;
 
                 return ret;
             }
@@ -293,6 +292,43 @@ namespace AdventOfCode2018
             protected override void KillEnemy(State state)
             {
                 state.ElfCount--;
+            }
+        }
+
+        private class DistanceNode : IComparable<DistanceNode>
+        {
+            private readonly PriorityQueue<DistanceNode>.Node _node;
+            private int _distance;
+
+            public DistanceNode(Vec2 loc)
+            {
+                _distance = int.MaxValue;
+                Loc = loc;
+            }
+
+            public DistanceNode(PriorityQueue<DistanceNode> queue, Vec2 loc, int distance = int.MaxValue)
+            {
+                Loc = loc;
+                _distance = distance;
+                _node = queue.AddGetNode(this);
+            }
+
+            public int Distance
+            {
+                get => _distance;
+                set
+                {
+                    _distance = value;
+                    _node?.Update();
+                }
+            }
+
+            public Vec2 Loc { get; }
+
+            public int CompareTo(DistanceNode other)
+            {
+                if (ReferenceEquals(this, other)) return 0;
+                return other is null ? 1 : _distance.CompareTo(other._distance);
             }
         }
     }
